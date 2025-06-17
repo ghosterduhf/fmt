@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Forex Market Time</title>
+  <title>Forex Market Time (Your Timezone)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
@@ -99,7 +99,7 @@
   </style>
 </head>
 <body>
-  <h1 id="title">Forex Market Sessions (Algeria Time)</h1>
+  <h1 id="title">Forex Market Sessions (Your Timezone)</h1>
   <p id="currentTime"></p>
   <button id="toggleOpenOnly">🔍 Show Open Sessions Only</button>
   <button id="langToggle">🌐 اللغة: عربي</button>
@@ -114,12 +114,12 @@
   </a>
 
   <script>
-    const sessions = [
-      { name: 'Frankfurt', open: '07:00', close: '15:00' },
-      { name: 'London', open: '08:00', close: '16:00' },
-      { name: 'New York', open: '13:00', close: '21:00' },
-      { name: 'Sydney', open: '23:00', close: '07:00' },
-      { name: 'Tokyo', open: '00:00', close: '08:00' }
+    const sessionsUTC = [
+      { name: 'Frankfurt', open: '06:00', close: '14:00' }, // UTC times
+      { name: 'London', open: '07:00', close: '15:00' },
+      { name: 'New York', open: '12:00', close: '20:00' },
+      { name: 'Sydney', open: '21:00', close: '05:00' },
+      { name: 'Tokyo', open: '23:00', close: '07:00' }
     ];
 
     let showOpenOnly = false;
@@ -127,8 +127,8 @@
 
     const texts = {
       en: {
-        title: 'Forex Market Sessions (Algeria Time)',
-        current: '⏱️ Current time (Algiers)',
+        title: 'Forex Market Sessions (Your Timezone)',
+        current: '⏱️ Current time',
         showOpen: '🔍 Show Open Sessions Only',
         showAll: '📋 Show All Sessions',
         open: '🟢 Open',
@@ -137,8 +137,8 @@
         langBtn: '🌐 اللغة: عربي'
       },
       ar: {
-        title: 'جلسات سوق الفوركس (بتوقيت الجزائر)',
-        current: '⏱️ الوقت الحالي (الجزائر)',
+        title: 'جلسات سوق الفوركس (حسب توقيتك)',
+        current: '⏱️ الوقت الحالي',
         showOpen: '🔍 عرض الجلسات المفتوحة فقط',
         showAll: '📋 عرض كل الجلسات',
         open: '🟢 مفتوحة',
@@ -148,20 +148,15 @@
       }
     };
 
-    function parseTime(str) {
+    function parseUTC(str) {
       const [h, m] = str.split(':').map(Number);
-      const d = new Date();
-      d.setHours(h, m, 0, 0);
-      return d;
+      const now = new Date();
+      const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), h, m));
+      return date;
     }
 
-    function formatAMPM(date) {
-      let hours = date.getHours();
-      const minutes = date.getMinutes();
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12 || 12;
-      const mins = minutes < 10 ? '0' + minutes : minutes;
-      return `${hours}:${mins} ${ampm}`;
+    function formatLocal(date) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     }
 
     function updateText() {
@@ -174,17 +169,19 @@
 
     function update() {
       const now = new Date();
-      const currentTime = formatAMPM(now);
-      document.getElementById('currentTime').textContent = `${texts[lang].current}: ${currentTime}`;
+      document.getElementById('currentTime').textContent = `${texts[lang].current}: ${formatLocal(now)}`;
 
       const container = document.getElementById('sessions');
       container.innerHTML = '';
       let next = null;
 
-      sessions.forEach(s => {
-        const open = parseTime(s.open);
-        let close = parseTime(s.close);
-        if (close <= open) close.setDate(close.getDate() + 1);
+      sessionsUTC.forEach(s => {
+        const openUTC = parseUTC(s.open);
+        let closeUTC = parseUTC(s.close);
+        if (closeUTC <= openUTC) closeUTC.setDate(closeUTC.getDate() + 1);
+
+        const open = new Date(openUTC.toLocaleString("en-US", { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
+        const close = new Date(closeUTC.toLocaleString("en-US", { timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone }));
 
         const total = close - open;
         const elapsed = now - open;
@@ -198,7 +195,7 @@
         sessionDiv.innerHTML = `
           ${isOpen ? '<div class="live-badge">LIVE</div>' : ''}
           <h3>${s.name}</h3>
-          <p>${formatAMPM(open)} → ${formatAMPM(close)}</p>
+          <p>${formatLocal(open)} → ${formatLocal(close)}</p>
           <p class="${isOpen ? 'open' : 'closed'}">${isOpen ? texts[lang].open : texts[lang].closed}</p>
           <div class="bar">
             <div class="bar-fill" style="width: ${pct}%; background: ${isOpen ? '#4ade80' : '#f87171'};"></div>
