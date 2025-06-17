@@ -2,41 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Forex Market Time</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Forex Market Time - Algeria</title>
   <style>
+    * {
+      box-sizing: border-box;
+    }
     body {
-      font-family: Arial, sans-serif;
       margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #f1f5f9;
+      color: #111;
       padding: 1rem;
-      background: #f4f4f4;
-      color: #333;
     }
     h1 {
       text-align: center;
       margin-bottom: 2rem;
     }
-    .market-container {
+    .grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1rem;
+      gap: 1.5rem;
       max-width: 1200px;
       margin: auto;
     }
-    .market {
+    .card {
       background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      padding: 1rem;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+      transition: transform 0.2s ease;
+    }
+    .card:hover {
+      transform: translateY(-4px);
+    }
+    .card h2 {
+      margin: 0 0 0.5rem;
+      font-size: 1.3rem;
+    }
+    .card small {
+      color: #666;
+      font-size: 0.85rem;
+    }
+    .info {
+      margin: 0.4rem 0;
     }
     .status {
       font-weight: bold;
+      font-size: 1rem;
     }
     .open {
-      color: green;
+      color: #16a34a;
     }
     .closed {
-      color: red;
+      color: #dc2626;
     }
     .time {
       font-family: monospace;
@@ -44,97 +63,69 @@
   </style>
 </head>
 <body>
-  <h1>Forex Market Time (Algeria)</h1>
-  <div class="market-container" id="markets"></div>
+  <h1>Forex Market Status (Africa/Algiers)</h1>
+  <div class="grid" id="markets"></div>
 
   <script>
     const marketData = [
-      {
-        city: 'Frankfurt',
-        country: 'Germany',
-        tz: 'Europe/Berlin',
-        open: '07:00',
-        close: '15:00'
-      },
-      {
-        city: 'London',
-        country: 'Great Britain',
-        tz: 'Europe/London',
-        open: '08:00',
-        close: '16:00'
-      },
-      {
-        city: 'New York',
-        country: 'United States',
-        tz: 'America/New_York',
-        open: '13:00',
-        close: '21:00'
-      },
-      {
-        city: 'Sydney',
-        country: 'Australia',
-        tz: 'Australia/Sydney',
-        open: '23:00',
-        close: '07:00'
-      },
-      {
-        city: 'Tokyo',
-        country: 'Japan',
-        tz: 'Asia/Tokyo',
-        open: '00:00',
-        close: '08:00'
-      }
+      { city: 'Frankfurt', country: 'Germany', open: '07:00', close: '15:00' },
+      { city: 'London', country: 'Great Britain', open: '08:00', close: '16:00' },
+      { city: 'New York', country: 'United States', open: '13:00', close: '21:00' },
+      { city: 'Sydney', country: 'Australia', open: '23:00', close: '07:00' },
+      { city: 'Tokyo', country: 'Japan', open: '00:00', close: '08:00' }
     ];
-
-    const marketsContainer = document.getElementById('markets');
 
     function getAlgeriaTimeNow() {
       const now = new Date();
       return new Date(now.toLocaleString("en-US", { timeZone: "Africa/Algiers" }));
     }
 
-    function timeToMinutes(timeStr) {
-      const [h, m] = timeStr.split(':').map(Number);
+    function timeToMinutes(str) {
+      const [h, m] = str.split(':').map(Number);
       return h * 60 + m;
     }
 
-    function isOpen(open, close, nowMinutes) {
-      const openMin = timeToMinutes(open);
-      const closeMin = timeToMinutes(close);
-      if (closeMin > openMin) {
-        return nowMinutes >= openMin && nowMinutes < closeMin;
+    function formatTo12h(str) {
+      const [h, m] = str.split(':').map(Number);
+      const suffix = h >= 12 ? 'PM' : 'AM';
+      const hour12 = ((h + 11) % 12 + 1);
+      return `${hour12}:${m.toString().padStart(2, '0')} ${suffix}`;
+    }
+
+    function isOpen(open, close, nowMin) {
+      const o = timeToMinutes(open);
+      const c = timeToMinutes(close);
+      if (c > o) {
+        return nowMin >= o && nowMin < c;
       } else {
-        // Session spans midnight
-        return nowMinutes >= openMin || nowMinutes < closeMin;
+        return nowMin >= o || nowMin < c;
       }
     }
 
-    function renderMarkets() {
+    function render() {
       const now = getAlgeriaTimeNow();
-      const nowMinutes = now.getHours() * 60 + now.getMinutes();
-      marketsContainer.innerHTML = '';
+      const minutes = now.getHours() * 60 + now.getMinutes();
+      const container = document.getElementById('markets');
+      container.innerHTML = '';
 
-      marketData.forEach(market => {
-        const open = market.open;
-        const close = market.close;
-        const openMin = timeToMinutes(open);
-        const closeMin = timeToMinutes(close);
-        const openStatus = isOpen(open, close, nowMinutes);
+      marketData.forEach(({ city, country, open, close }) => {
+        const status = isOpen(open, close, minutes) ? 'Open' : 'Closed';
+        const statusClass = status.toLowerCase();
 
-        const div = document.createElement('div');
-        div.className = 'market';
-        div.innerHTML = `
-          <h2>${market.city} <small>(${market.country})</small></h2>
-          <p>Open: <span class="time">${open}</span></p>
-          <p>Close: <span class="time">${close}</span></p>
-          <p>Status: <span class="status ${openStatus ? 'open' : 'closed'}">${openStatus ? 'Open' : 'Closed'}</span></p>
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+          <h2>${city} <small>(${country})</small></h2>
+          <p class="info">Open: <span class="time">${formatTo12h(open)}</span></p>
+          <p class="info">Close: <span class="time">${formatTo12h(close)}</span></p>
+          <p class="info status ${statusClass}">Status: ${status}</p>
         `;
-        marketsContainer.appendChild(div);
+        container.appendChild(card);
       });
     }
 
-    renderMarkets();
-    setInterval(renderMarkets, 60000); // update every 1 minute
+    render();
+    setInterval(render, 60000);
   </script>
 </body>
 </html>
