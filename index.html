@@ -6,41 +6,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     :root {
-      --bg: #0f172a;
-      --text: white;
-      --card: #1e293b;
-      --accent: #22c55e;
-      --btn: #1e40af;
       --open: #4ade80;
       --closed: #f87171;
-      --bar: #334155;
-    }
-
-    body.light {
-      --bg: #f4f4f5;
-      --text: #111;
-      --card: #fff;
-      --accent: #16a34a;
-      --btn: #2563eb;
-      --open: #16a34a;
-      --closed: #dc2626;
-      --bar: #e5e7eb;
     }
 
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
+      background-color: #0f172a;
+      color: white;
       padding: 1rem;
       max-width: 720px;
       margin-left: auto;
       margin-right: auto;
-      transition: background 0.3s, color 0.3s;
     }
 
     h1 {
-      color: var(--accent);
+      color: #22c55e;
       text-align: center;
       font-size: 1.5rem;
       margin-bottom: 1rem;
@@ -58,7 +40,7 @@
       max-width: 320px;
       margin: 0.5rem auto;
       padding: 0.6rem 1rem;
-      background-color: var(--btn);
+      background-color: #1e40af;
       border: none;
       color: white;
       border-radius: 8px;
@@ -67,7 +49,7 @@
     }
 
     .session {
-      background: var(--card);
+      background: #1e293b;
       border-radius: 12px;
       padding: 1rem;
       margin-bottom: 1.2rem;
@@ -88,14 +70,14 @@
     .bar {
       margin-top: 0.5rem;
       height: 10px;
-      background: var(--bar);
+      background: #334155;
       border-radius: 6px;
       overflow: hidden;
     }
 
     .bar-fill {
       height: 100%;
-      transition: width 0.3s ease;
+      transition: width 1s linear;
     }
 
     .open {
@@ -138,7 +120,6 @@
   <p id="currentTime"></p>
   <button id="toggleOpenOnly">🔍 Show Open Sessions Only</button>
   <button id="langToggle">🌐 اللغة: عربي</button>
-  <button id="themeToggle">🌗 Toggle Theme</button>
   <div id="sessions"></div>
   <p id="nextSession"></p>
 
@@ -163,8 +144,7 @@
         open: '🟢 Open',
         closed: '🔴 Closed',
         next: '🕒 Next session',
-        langBtn: '🌐 اللغة: عربي',
-        theme: '🌗 Toggle Theme'
+        langBtn: '🌐 اللغة: عربي'
       },
       ar: {
         title: 'جلسات سوق الفوركس (بتوقيت الجزائر)',
@@ -174,8 +154,7 @@
         open: '🟢 مفتوحة',
         closed: '🔴 مغلقة',
         next: '🕒 الجلسة القادمة',
-        langBtn: '🌐 Language: English',
-        theme: '🌗 تغيير المظهر'
+        langBtn: '🌐 Language: English'
       }
     };
 
@@ -201,19 +180,14 @@
         ? texts[lang].showAll
         : texts[lang].showOpen;
       document.getElementById('langToggle').textContent = texts[lang].langBtn;
-      document.getElementById('themeToggle').textContent = texts[lang].theme;
     }
 
-    function update() {
+    function renderSessions() {
       const now = new Date();
-      const currentTime = formatAMPM(now);
-      document.getElementById('currentTime').textContent = `${texts[lang].current}: ${currentTime}`;
-
       const container = document.getElementById('sessions');
       container.innerHTML = '';
-      let next = null;
 
-      sessions.forEach(s => {
+      sessions.forEach((s, i) => {
         const open = parseTime(s.open);
         let close = parseTime(s.close);
         if (close <= open) close.setDate(close.getDate() + 1);
@@ -231,14 +205,46 @@
           ${isOpen ? '<div class="live-badge">LIVE</div>' : ''}
           <h3>${s.name}</h3>
           <p>${formatAMPM(open)} → ${formatAMPM(close)}</p>
-          <p class="${isOpen ? 'open' : 'closed'}">${isOpen ? texts[lang].open : texts[lang].closed}</p>
+          <p id="status-${i}" class="${isOpen ? 'open' : 'closed'}">${isOpen ? texts[lang].open : texts[lang].closed}</p>
           <div class="bar">
-            <div class="bar-fill" style="width: ${pct}%; background: ${isOpen ? 'var(--open)' : 'var(--closed)'};"></div>
+            <div class="bar-fill" id="bar-${i}" style="width: ${pct}%; background: ${isOpen ? 'var(--open)' : 'var(--closed)'};"></div>
           </div>
         `;
         container.appendChild(sessionDiv);
+      });
+    }
 
-        if (!isOpen && open > now && (!next || open < next.time)) {
+    function updateLiveBars() {
+      const now = new Date();
+
+      sessions.forEach((s, i) => {
+        const bar = document.getElementById(`bar-${i}`);
+        const status = document.getElementById(`status-${i}`);
+        if (!bar || !status) return;
+
+        const open = parseTime(s.open);
+        let close = parseTime(s.close);
+        if (close <= open) close.setDate(close.getDate() + 1);
+
+        const total = close - open;
+        const elapsed = now - open;
+        const isOpen = elapsed >= 0 && now <= close;
+        const pct = Math.max(0, Math.min(100, (elapsed / total) * 100));
+
+        bar.style.width = `${pct}%`;
+        bar.style.background = isOpen ? 'var(--open)' : 'var(--closed)';
+        status.textContent = isOpen ? texts[lang].open : texts[lang].closed;
+        status.className = isOpen ? 'open' : 'closed';
+      });
+
+      document.getElementById('currentTime').textContent =
+        `${texts[lang].current}: ${formatAMPM(now)}`;
+
+      // Update next session countdown
+      let next = null;
+      sessions.forEach(s => {
+        const open = parseTime(s.open);
+        if (open > now && (!next || open < next.time)) {
           next = { name: s.name, time: open };
         }
       });
@@ -258,28 +264,20 @@
     document.getElementById('toggleOpenOnly').addEventListener('click', () => {
       showOpenOnly = !showOpenOnly;
       updateText();
-      update();
+      renderSessions();
     });
 
     document.getElementById('langToggle').addEventListener('click', () => {
       lang = lang === 'en' ? 'ar' : 'en';
       updateText();
-      update();
+      renderSessions();
     });
 
-    document.getElementById('themeToggle').addEventListener('click', () => {
-      document.body.classList.toggle('light');
-      localStorage.setItem('theme', document.body.classList.contains('light') ? 'light' : 'dark');
-    });
-
-    // Load stored theme
-    if (localStorage.getItem('theme') === 'light') {
-      document.body.classList.add('light');
-    }
-
+    // Initial setup
     updateText();
-    update();
-    setInterval(update, 1000);
+    renderSessions();
+    updateLiveBars();
+    setInterval(updateLiveBars, 1000);
   </script>
 </body>
 </html>
