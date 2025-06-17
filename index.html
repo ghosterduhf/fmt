@@ -77,13 +77,23 @@
     .live-badge {
       position: absolute;
       top: 1rem;
-      right: 1rem;
+      right: 3rem;
       background: #ef4444;
       color: white;
       padding: 0.3rem 0.6rem;
       font-size: 0.75rem;
       font-weight: bold;
       border-radius: 6px;
+    }
+    .notify-toggle {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: transparent;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-size: 1.1rem;
     }
   </style>
 </head>
@@ -107,6 +117,7 @@
     let showOpenOnly = false;
     let lang = 'en';
     const statusMap = new Map();
+    const notifyPrefs = JSON.parse(localStorage.getItem('notifyPrefs') || '{}');
 
     const texts = {
       en: {
@@ -117,7 +128,9 @@
         open: '🟢 Open',
         closed: '🔴 Closed',
         next: '🕒 Next session',
-        langBtn: '🌐 اللغة: عربي'
+        langBtn: '🌐 اللغة: عربي',
+        alertOn: '🔔',
+        alertOff: '🔕'
       },
       ar: {
         title: 'جلسات سوق الفوركس (بتوقيت الجزائر)',
@@ -127,7 +140,9 @@
         open: '🟢 مفتوحة',
         closed: '🔴 مغلقة',
         next: '🕒 الجلسة القادمة',
-        langBtn: '🌐 Language: English'
+        langBtn: '🌐 Language: English',
+        alertOn: '🔔',
+        alertOff: '🔕'
       }
     };
 
@@ -159,6 +174,12 @@
       return `${hours}:${mins} ${ampm}`;
     }
 
+    function toggleNotify(sessionName) {
+      notifyPrefs[sessionName] = !notifyPrefs[sessionName];
+      localStorage.setItem('notifyPrefs', JSON.stringify(notifyPrefs));
+      update();
+    }
+
     function updateText() {
       document.getElementById('title').textContent = texts[lang].title;
       document.getElementById('toggleOpenOnly').textContent = showOpenOnly
@@ -186,11 +207,15 @@
         const isOpen = elapsed >= 0 && now <= close;
         const pct = Math.max(0, Math.min(100, (elapsed / total) * 100));
 
+        const notifyThis = notifyPrefs[s.name];
+
         if (statusMap.has(s.name)) {
           const prev = statusMap.get(s.name);
           if (prev !== isOpen) {
-            const eventText = isOpen ? texts[lang].open : texts[lang].closed;
-            notify(`${s.name} ${eventText}`, `${s.name} session is now ${isOpen ? 'OPEN' : 'CLOSED'}`);
+            if (notifyThis) {
+              const stateText = isOpen ? texts[lang].open : texts[lang].closed;
+              notify(`${s.name} ${stateText}`, `${s.name} session is now ${isOpen ? 'OPEN' : 'CLOSED'}`);
+            }
             statusMap.set(s.name, isOpen);
           }
         } else {
@@ -203,6 +228,7 @@
         sessionDiv.className = 'session';
         sessionDiv.innerHTML = `
           ${isOpen ? '<div class="live-badge">LIVE</div>' : ''}
+          <button class="notify-toggle" onclick="toggleNotify('${s.name}')">${notifyThis ? texts[lang].alertOn : texts[lang].alertOff}</button>
           <h3>${s.name}</h3>
           <p>${formatAMPM(open)} → ${formatAMPM(close)}</p>
           <p class="${isOpen ? 'open' : 'closed'}">${isOpen ? texts[lang].open : texts[lang].closed}</p>
@@ -222,7 +248,7 @@
         const diff = next.time - now;
         const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
         const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
-        const s = String(Math.floor((diff % 1000) / 100)).padStart(2, '0');
+        const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
         nextText.textContent = `${texts[lang].next}: ${next.name} ${lang === 'ar' ? 'تفتح خلال' : 'opens in'} ${h}:${m}:${s}`;
       } else {
         nextText.textContent = '';
@@ -240,6 +266,8 @@
       updateText();
       update();
     });
+
+    window.toggleNotify = toggleNotify;
 
     requestNotificationPermission();
     updateText();
