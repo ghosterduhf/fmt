@@ -1,119 +1,140 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Forex Market Time (Algeria)</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Forex Market Time</title>
   <style>
     body {
-      font-family: sans-serif;
-      background: #0f172a;
-      color: white;
-      padding: 2rem;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 1rem;
+      background: #f4f4f4;
+      color: #333;
     }
     h1 {
-      color: #22c55e;
+      text-align: center;
+      margin-bottom: 2rem;
     }
-    .session {
-      margin-bottom: 20px;
+    .market-container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1rem;
+      max-width: 1200px;
+      margin: auto;
     }
-    .bar {
-      height: 10px;
-      background: #334155;
-      border-radius: 4px;
-      overflow: hidden;
+    .market {
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 1rem;
     }
-    .bar-fill {
-      height: 100%;
-      background: #4ade80;
-      transition: width 0.3s ease;
+    .status {
+      font-weight: bold;
     }
     .open {
-      color: #4ade80;
+      color: green;
     }
     .closed {
-      color: #f87171;
+      color: red;
+    }
+    .time {
+      font-family: monospace;
     }
   </style>
 </head>
 <body>
-  <h1>Forex Market Sessions (Algeria Time)</h1>
-  <p id="currentTime"></p>
-  <div id="sessions"></div>
-  <p id="nextSession"></p>
+  <h1>Forex Market Time (Algeria)</h1>
+  <div class="market-container" id="markets"></div>
 
   <script>
-    const sessions = [
-      { name: 'Frankfurt', open: '07:00', close: '15:00' },
-      { name: 'London',    open: '08:00', close: '16:00' },
-      { name: 'New York',  open: '13:00', close: '21:00' },
-      { name: 'Sydney',    open: '23:00', close: '07:00' },
-      { name: 'Tokyo',     open: '00:00', close: '08:00' }
+    const marketData = [
+      {
+        city: 'Frankfurt',
+        country: 'Germany',
+        tz: 'Europe/Berlin',
+        open: '07:00',
+        close: '15:00'
+      },
+      {
+        city: 'London',
+        country: 'Great Britain',
+        tz: 'Europe/London',
+        open: '08:00',
+        close: '16:00'
+      },
+      {
+        city: 'New York',
+        country: 'United States',
+        tz: 'America/New_York',
+        open: '13:00',
+        close: '21:00'
+      },
+      {
+        city: 'Sydney',
+        country: 'Australia',
+        tz: 'Australia/Sydney',
+        open: '23:00',
+        close: '07:00'
+      },
+      {
+        city: 'Tokyo',
+        country: 'Japan',
+        tz: 'Asia/Tokyo',
+        open: '00:00',
+        close: '08:00'
+      }
     ];
 
-    function parseTime(str) {
-      const [h, m] = str.split(':').map(Number);
-      const d = new Date();
-      d.setHours(h, m, 0, 0);
-      return d;
-    }
+    const marketsContainer = document.getElementById('markets');
 
-    function formatAMPM(date) {
-      let hours = date.getHours();
-      const minutes = date.getMinutes();
-      const ampm = hours >= 12 ? 'PM' : 'AM';
-      hours = hours % 12 || 12;
-      const mins = minutes < 10 ? '0' + minutes : minutes;
-      return `${hours}:${mins} ${ampm}`;
-    }
-
-    function update() {
+    function getAlgeriaTimeNow() {
       const now = new Date();
-      const currentTime = formatAMPM(now);
-      document.getElementById('currentTime').textContent = `⏱️ Current time (Algiers): ${currentTime}`;
+      return new Date(now.toLocaleString("en-US", { timeZone: "Africa/Algiers" }));
+    }
 
-      const container = document.getElementById('sessions');
-      container.innerHTML = '';
-      let next = null;
+    function timeToMinutes(timeStr) {
+      const [h, m] = timeStr.split(':').map(Number);
+      return h * 60 + m;
+    }
 
-      sessions.forEach(s => {
-        const open = parseTime(s.open);
-        let close = parseTime(s.close);
-        if (close <= open) close.setDate(close.getDate() + 1); // overnight
-
-        const total = close - open;
-        const elapsed = now - open;
-        const isOpen = elapsed >= 0 && now <= close;
-        const pct = Math.max(0, Math.min(100, (elapsed / total) * 100));
-
-        const sessionDiv = document.createElement('div');
-        sessionDiv.className = 'session';
-        sessionDiv.innerHTML = `
-          <h3>${s.name}</h3>
-          <p>${formatAMPM(open)} → ${formatAMPM(close)}</p>
-          <p class="${isOpen ? 'open' : 'closed'}">${isOpen ? '🟢 Open' : '🔴 Closed'}</p>
-          <div class="bar"><div class="bar-fill" style="width: ${pct}%; background: ${isOpen ? '#4ade80' : '#f87171'};"></div></div>
-        `;
-        container.appendChild(sessionDiv);
-
-        if (!isOpen && open > now && (!next || open < next.time)) {
-          next = { name: s.name, time: open };
-        }
-      });
-
-      const nextText = document.getElementById('nextSession');
-      if (next) {
-        const diff = next.time - now;
-        const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
-        const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
-        const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-        nextText.textContent = `🕒 Next session: ${next.name} opens in ${h}:${m}:${s}`;
+    function isOpen(open, close, nowMinutes) {
+      const openMin = timeToMinutes(open);
+      const closeMin = timeToMinutes(close);
+      if (closeMin > openMin) {
+        return nowMinutes >= openMin && nowMinutes < closeMin;
       } else {
-        nextText.textContent = '';
+        // Session spans midnight
+        return nowMinutes >= openMin || nowMinutes < closeMin;
       }
     }
 
-    update();
-    setInterval(update, 1000);
+    function renderMarkets() {
+      const now = getAlgeriaTimeNow();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      marketsContainer.innerHTML = '';
+
+      marketData.forEach(market => {
+        const open = market.open;
+        const close = market.close;
+        const openMin = timeToMinutes(open);
+        const closeMin = timeToMinutes(close);
+        const openStatus = isOpen(open, close, nowMinutes);
+
+        const div = document.createElement('div');
+        div.className = 'market';
+        div.innerHTML = `
+          <h2>${market.city} <small>(${market.country})</small></h2>
+          <p>Open: <span class="time">${open}</span></p>
+          <p>Close: <span class="time">${close}</span></p>
+          <p>Status: <span class="status ${openStatus ? 'open' : 'closed'}">${openStatus ? 'Open' : 'Closed'}</span></p>
+        `;
+        marketsContainer.appendChild(div);
+      });
+    }
+
+    renderMarkets();
+    setInterval(renderMarkets, 60000); // update every 1 minute
   </script>
 </body>
 </html>
