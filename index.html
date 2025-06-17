@@ -21,10 +21,10 @@
       font-size: 1.5rem;
       margin-bottom: 1rem;
     }
-    #currentTime, #userTime {
+    #currentTime, #nextSession {
       text-align: center;
       font-size: 1rem;
-      margin-bottom: 0.5rem;
+      margin-bottom: 1.5rem;
     }
     button {
       display: block;
@@ -64,7 +64,7 @@
     }
     .bar-fill {
       height: 100%;
-      transition: width 0.3s ease;
+      transition: width 1s linear;
     }
     .open {
       color: #4ade80;
@@ -89,12 +89,13 @@
 </head>
 <body>
   <h1 id="title">Forex Market Sessions (Algeria Time)</h1>
-  <p id="currentTime">⏱️ Current Time (Algiers):</p>
-  <p id="userTime">🕰️ Your Local Time:</p>
+  <p id="currentTime"></p>
   <button id="toggleOpenOnly">🔍 Show Open Sessions Only</button>
   <button id="langToggle">🌐 اللغة: عربي</button>
   <div id="sessions"></div>
   <p id="nextSession"></p>
+
+  <audio id="alert-sound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_d5d4fa2e68.mp3"></audio>
 
   <script>
     const sessions = [
@@ -107,12 +108,12 @@
 
     let showOpenOnly = false;
     let lang = 'en';
+    let previousStates = {};
 
     const texts = {
       en: {
         title: 'Forex Market Sessions (Algeria Time)',
-        current: '⏱️ Current Time (Algiers)',
-        local: '🕰️ Your Local Time',
+        current: '⏱️ Current time (Algiers)',
         showOpen: '🔍 Show Open Sessions Only',
         showAll: '📋 Show All Sessions',
         open: '🟢 Open',
@@ -123,7 +124,6 @@
       ar: {
         title: 'جلسات سوق الفوركس (بتوقيت الجزائر)',
         current: '⏱️ الوقت الحالي (الجزائر)',
-        local: '🕰️ توقيتك المحلي',
         showOpen: '🔍 عرض الجلسات المفتوحة فقط',
         showAll: '📋 عرض كل الجلسات',
         open: '🟢 مفتوحة',
@@ -157,25 +157,11 @@
       document.getElementById('langToggle').textContent = texts[lang].langBtn;
     }
 
-    function updateClock() {
+    function update() {
       const now = new Date();
+      const currentTime = formatAMPM(now);
+      document.getElementById('currentTime').textContent = `${texts[lang].current}: ${currentTime}`;
 
-      const options = {
-        hour: 'numeric',
-        minute: 'numeric',
-        hour12: true,
-        timeZone: 'Africa/Algiers'
-      };
-
-      const algiersTime = new Intl.DateTimeFormat('en-US', options).format(now);
-      const localTime = formatAMPM(now);
-
-      document.getElementById('currentTime').textContent = `${texts[lang].current}: ${algiersTime}`;
-      document.getElementById('userTime').textContent = `${texts[lang].local}: ${localTime}`;
-    }
-
-    function updateSessions() {
-      const now = new Date();
       const container = document.getElementById('sessions');
       container.innerHTML = '';
       let next = null;
@@ -189,6 +175,11 @@
         const elapsed = now - open;
         const isOpen = elapsed >= 0 && now <= close;
         const pct = Math.max(0, Math.min(100, (elapsed / total) * 100));
+
+        if (previousStates[s.name] !== undefined && previousStates[s.name] !== isOpen) {
+          document.getElementById('alert-sound').play().catch(() => {});
+        }
+        previousStates[s.name] = isOpen;
 
         if (showOpenOnly && !isOpen) return;
 
@@ -225,23 +216,18 @@
     document.getElementById('toggleOpenOnly').addEventListener('click', () => {
       showOpenOnly = !showOpenOnly;
       updateText();
-      updateSessions();
+      update();
     });
 
     document.getElementById('langToggle').addEventListener('click', () => {
       lang = lang === 'en' ? 'ar' : 'en';
       updateText();
-      updateClock();
-      updateSessions();
+      update();
     });
 
     updateText();
-    updateClock();
-    updateSessions();
-    setInterval(() => {
-      updateClock();
-      updateSessions();
-    }, 1000);
+    update();
+    setInterval(update, 1000);
   </script>
 </body>
 </html>
