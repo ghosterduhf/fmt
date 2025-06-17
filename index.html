@@ -121,8 +121,10 @@
 
     let showOpenOnly = false;
     let lang = 'en';
-    const alertedSessions = new Set();
-    const audio = new Audio("https://www.soundjay.com/button/sounds/beep-07.mp3");
+    const alertedOpen = new Set();
+    const alertedClose = new Set();
+    const openSound = new Audio("https://www.soundjay.com/button/sounds/button-3.mp3");
+    const closeSound = new Audio("https://www.soundjay.com/button/sounds/button-10.mp3");
 
     const texts = {
       en: {
@@ -225,11 +227,17 @@
         status.textContent = isOpen ? texts[lang].open : texts[lang].closed;
         status.className = isOpen ? 'open' : 'closed';
 
-        // sound alert
-        const openKey = `${s.name}-${open.getHours()}:${open.getMinutes()}`;
-        if (isOpen && !alertedSessions.has(openKey) && Math.abs(now - open) < 2000) {
-          audio.play().catch(() => {});
-          alertedSessions.add(openKey);
+        const keyOpen = `${s.name}-open`;
+        const keyClose = `${s.name}-close`;
+
+        if (isOpen && !alertedOpen.has(keyOpen) && Math.abs(now - open) < 1500) {
+          openSound.play().catch(() => {});
+          alertedOpen.add(keyOpen);
+        }
+
+        if (!isOpen && !alertedClose.has(keyClose) && Math.abs(now - close) < 1500) {
+          closeSound.play().catch(() => {});
+          alertedClose.add(keyClose);
         }
       });
 
