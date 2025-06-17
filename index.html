@@ -5,18 +5,40 @@
   <title>Forex Market Time (Algeria)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
+    :root {
+      --bg: #0f172a;
+      --text: white;
+      --card: #1e293b;
+      --accent: #22c55e;
+      --bar-bg: #334155;
+      --bar-fill: #4ade80;
+      --live-bg: #ef4444;
+      --button-bg: #1e40af;
+    }
+
+    .light-mode {
+      --bg: #f1f5f9;
+      --text: #111827;
+      --card: #e2e8f0;
+      --accent: #16a34a;
+      --bar-bg: #cbd5e1;
+      --bar-fill: #4ade80;
+      --live-bg: #ef4444;
+      --button-bg: #3b82f6;
+    }
+
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background-color: #0f172a;
-      color: white;
+      background-color: var(--bg);
+      color: var(--text);
       padding: 1rem;
       max-width: 720px;
       margin-left: auto;
       margin-right: auto;
     }
     h1 {
-      color: #22c55e;
+      color: var(--accent);
       text-align: center;
       font-size: 1.5rem;
       margin-bottom: 1rem;
@@ -32,7 +54,7 @@
       max-width: 320px;
       margin: 0.5rem auto;
       padding: 0.6rem 1rem;
-      background-color: #1e40af;
+      background-color: var(--button-bg);
       border: none;
       color: white;
       border-radius: 8px;
@@ -40,7 +62,7 @@
       font-size: 1rem;
     }
     .session {
-      background: #1e293b;
+      background: var(--card);
       border-radius: 12px;
       padding: 1rem;
       margin-bottom: 1.2rem;
@@ -58,7 +80,7 @@
     .bar {
       margin-top: 0.5rem;
       height: 10px;
-      background: #334155;
+      background: var(--bar-bg);
       border-radius: 6px;
       overflow: hidden;
     }
@@ -67,18 +89,18 @@
       transition: width 0.3s ease;
     }
     .open {
-      color: #4ade80;
+      color: #22c55e;
       font-weight: bold;
     }
     .closed {
-      color: #f87171;
+      color: #ef4444;
       font-weight: bold;
     }
     .live-badge {
       position: absolute;
       top: 1rem;
       right: 3rem;
-      background: #ef4444;
+      background: var(--live-bg);
       color: white;
       padding: 0.3rem 0.6rem;
       font-size: 0.75rem;
@@ -91,7 +113,7 @@
       right: 1rem;
       background: transparent;
       border: none;
-      color: white;
+      color: inherit;
       cursor: pointer;
       font-size: 1.1rem;
     }
@@ -102,6 +124,7 @@
   <p id="currentTime"></p>
   <button id="toggleOpenOnly">🔍 Show Open Sessions Only</button>
   <button id="langToggle">🌐 اللغة: عربي</button>
+  <button id="themeToggle">🌙 Dark Mode</button>
   <div id="sessions"></div>
   <p id="nextSession"></p>
 
@@ -118,6 +141,9 @@
     let lang = 'en';
     const statusMap = new Map();
     const notifyPrefs = JSON.parse(localStorage.getItem('notifyPrefs') || '{}');
+    const theme = localStorage.getItem('theme') || 'dark';
+
+    if (theme === 'light') document.body.classList.add('light-mode');
 
     const texts = {
       en: {
@@ -130,7 +156,9 @@
         next: '🕒 Next session',
         langBtn: '🌐 اللغة: عربي',
         alertOn: '🔔',
-        alertOff: '🔕'
+        alertOff: '🔕',
+        dark: '🌙 Dark Mode',
+        light: '☀️ Light Mode'
       },
       ar: {
         title: 'جلسات سوق الفوركس (بتوقيت الجزائر)',
@@ -142,7 +170,9 @@
         next: '🕒 الجلسة القادمة',
         langBtn: '🌐 Language: English',
         alertOn: '🔔',
-        alertOff: '🔕'
+        alertOff: '🔕',
+        dark: '🌙 الوضع الداكن',
+        light: '☀️ الوضع الفاتح'
       }
     };
 
@@ -186,6 +216,8 @@
         ? texts[lang].showAll
         : texts[lang].showOpen;
       document.getElementById('langToggle').textContent = texts[lang].langBtn;
+      document.getElementById('themeToggle').textContent =
+        document.body.classList.contains('light-mode') ? texts[lang].dark : texts[lang].light;
     }
 
     function update() {
@@ -233,7 +265,7 @@
           <p>${formatAMPM(open)} → ${formatAMPM(close)}</p>
           <p class="${isOpen ? 'open' : 'closed'}">${isOpen ? texts[lang].open : texts[lang].closed}</p>
           <div class="bar">
-            <div class="bar-fill" style="width: ${pct}%; background: ${isOpen ? '#4ade80' : '#f87171'};"></div>
+            <div class="bar-fill" style="width: ${pct}%; background: ${isOpen ? 'var(--bar-fill)' : '#f87171'};"></div>
           </div>
         `;
         container.appendChild(sessionDiv);
@@ -263,6 +295,13 @@
 
     document.getElementById('langToggle').addEventListener('click', () => {
       lang = lang === 'en' ? 'ar' : 'en';
+      updateText();
+      update();
+    });
+
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      document.body.classList.toggle('light-mode');
+      localStorage.setItem('theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
       updateText();
       update();
     });
