@@ -2,153 +2,77 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Forex Market Sessions</title>
+  <title>Forex Market Time</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
+      margin: 0;
       font-family: 'Segoe UI', sans-serif;
       background-color: #0f172a;
       color: white;
       padding: 1rem;
       max-width: 720px;
-      margin: auto;
-    }
-    select {
-      padding: 0.5rem;
-      font-size: 1rem;
-      width: 100%;
-      margin: 1rem 0;
-      background-color: #1e293b;
-      color: white;
-      border: 1px solid #334155;
-      border-radius: 6px;
+      margin-left: auto;
+      margin-right: auto;
     }
     h1 {
       color: #22c55e;
       text-align: center;
       font-size: 1.5rem;
-    }
-    .session {
-      background: #1e293b;
-      border-radius: 12px;
-      padding: 1rem;
       margin-bottom: 1rem;
-      position: relative;
     }
-    .session h3 {
-      margin: 0 0 0.4rem;
+    #currentTime {
+      text-align: center;
+      font-size: 1.1rem;
+      margin-bottom: 1.5rem;
     }
-    .session p {
-      margin: 0.2rem 0;
-    }
-    .bar {
-      height: 10px;
-      background: #334155;
-      border-radius: 6px;
-      overflow: hidden;
-      margin-top: 0.5rem;
-    }
-    .bar-fill {
-      height: 100%;
-      transition: width 0.3s ease;
-    }
-    .open { color: #4ade80; }
-    .closed { color: #f87171; }
-    .live-badge {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-      background: #ef4444;
-      color: white;
-      padding: 0.3rem 0.6rem;
-      font-size: 0.75rem;
-      font-weight: bold;
-      border-radius: 6px;
+    select {
+      display: block;
+      margin: 0 auto 1.5rem;
+      padding: 0.5rem;
+      font-size: 1rem;
+      border-radius: 8px;
+      border: none;
     }
   </style>
 </head>
 <body>
-  <h1>Forex Market Sessions</h1>
-
-  <label for="timezone">🌍 Select Your Timezone:</label>
-  <select id="timezone"></select>
-
-  <p id="currentTime"></p>
-  <div id="sessions"></div>
+  <h1>Forex Market Clock</h1>
+  <div id="currentTime">Loading...</div>
+  <select id="timezoneSelect"></select>
 
   <script>
-    const sessionsUTC = [
-      { name: 'Frankfurt', open: '06:00', close: '14:00' },
-      { name: 'London', open: '07:00', close: '15:00' },
-      { name: 'New York', open: '12:00', close: '20:00' },
-      { name: 'Sydney', open: '21:00', close: '05:00' },
-      { name: 'Tokyo', open: '23:00', close: '07:00' }
-    ];
-
-    const timezoneSelect = document.getElementById('timezone');
     const currentTimeEl = document.getElementById('currentTime');
-    const sessionsEl = document.getElementById('sessions');
+    const timezoneSelect = document.getElementById('timezoneSelect');
 
-    // Get all timezones from Intl API
-    const timezones = Intl.supportedValuesOf('timeZone');
-    timezones.forEach(tz => {
-      const opt = document.createElement('option');
-      opt.value = tz;
-      opt.textContent = tz;
-      timezoneSelect.appendChild(opt);
-    });
-
-    // Load saved timezone
-    let selectedTimezone = localStorage.getItem('timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
-    timezoneSelect.value = selectedTimezone;
-
-    timezoneSelect.addEventListener('change', () => {
-      selectedTimezone = timezoneSelect.value;
-      localStorage.setItem('timezone', selectedTimezone);
-      update();
-    });
-
-    function getLocalTime(utcTime, offsetDays = 0) {
-      const [h, m] = utcTime.split(':').map(Number);
-      const now = new Date();
-      const utc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + offsetDays, h, m));
-      return new Date(utc.toLocaleString('en-US', { timeZone: selectedTimezone }));
-    }
-
-    function formatTime(date) {
-      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-
-    function update() {
-      const now = new Date(new Date().toLocaleString("en-US", { timeZone: selectedTimezone }));
-      currentTimeEl.textContent = `⏱ Current Time: ${formatTime(now)} (${selectedTimezone})`;
-      sessionsEl.innerHTML = '';
-
-      sessionsUTC.forEach(s => {
-        const open = getLocalTime(s.open);
-        let close = getLocalTime(s.close);
-        if (s.close < s.open) close = getLocalTime(s.close, 1);
-
-        const isOpen = now >= open && now <= close;
-        const total = close - open;
-        const elapsed = isOpen ? now - open : 0;
-        const percent = isOpen ? Math.min(100, Math.max(0, (elapsed / total) * 100)) : 0;
-
-        const div = document.createElement('div');
-        div.className = 'session';
-        div.innerHTML = `
-          ${isOpen ? '<div class="live-badge">LIVE</div>' : ''}
-          <h3>${s.name}</h3>
-          <p>${formatTime(open)} → ${formatTime(close)}</p>
-          <p class="${isOpen ? 'open' : 'closed'}">${isOpen ? '🟢 Open' : '🔴 Closed'}</p>
-          <div class="bar"><div class="bar-fill" style="width:${percent}%;background:${isOpen ? '#4ade80' : '#f87171'}"></div></div>
-        `;
-        sessionsEl.appendChild(div);
+    async function loadTimezones() {
+      const zones = Intl.supportedValuesOf('timeZone');
+      zones.forEach(tz => {
+        const opt = document.createElement('option');
+        opt.value = tz;
+        opt.textContent = tz;
+        timezoneSelect.appendChild(opt);
       });
+      timezoneSelect.value = Intl.DateTimeFormat().resolvedOptions().timeZone;
     }
 
-    update();
-    setInterval(update, 1000);
+    function updateClock() {
+      const tz = timezoneSelect.value;
+      const now = new Date();
+      const options = {
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: true,
+        timeZone: tz
+      };
+      const formatter = new Intl.DateTimeFormat('en-US', options);
+      currentTimeEl.textContent = `\u23F0 Current Time: ${formatter.format(now)} (${tz})`;
+
+      const nextTick = 1000 - (now.getMilliseconds());
+      setTimeout(updateClock, nextTick);
+    }
+
+    timezoneSelect.addEventListener('change', updateClock);
+    loadTimezones().then(updateClock);
   </script>
 </body>
 </html>
