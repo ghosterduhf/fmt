@@ -1,25 +1,128 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Forex Market Time (User Timezone)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link href="https://cdn.jsdelivr.net/npm/tzdata/timezones.json" rel="preload" as="fetch" crossorigin="anonymous">
+  <meta charset="UTF-8"/>
+  <title>Forex Market Sessions</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <style>
-    /* Keep existing styles */
-    /* ... */
+    :root {
+      --bg: #0f172a;
+      --text: white;
+      --card: #1e293b;
+      --accent: #22c55e;
+      --bar-bg: #334155;
+      --bar-fill: #4ade80;
+      --live-bg: #ef4444;
+      --button-bg: #1e40af;
+    }
+    .light-mode {
+      --bg: #f1f5f9;
+      --text: #111827;
+      --card: #e2e8f0;
+      --accent: #16a34a;
+      --bar-bg: #cbd5e1;
+      --bar-fill: #4ade80;
+      --live-bg: #ef4444;
+      --button-bg: #3b82f6;
+    }
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 1rem;
+      max-width: 720px;
+      margin: auto;
+    }
+    h1 {
+      color: var(--accent);
+      text-align: center;
+      font-size: 1.5rem;
+      margin-bottom: 1rem;
+    }
+    select, button {
+      display: block;
+      width: 100%;
+      max-width: 320px;
+      margin: 0.5rem auto;
+      padding: 0.6rem 1rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 8px;
+      background: var(--button-bg);
+      color: white;
+      cursor: pointer;
+      text-align: center;
+    }
+    #currentTime, #nextSession {
+      text-align: center;
+      font-size: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .session {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 1rem;
+      margin-bottom: 1.2rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+    .session h3 {
+      margin: 0 0 0.5rem;
+    }
+    .session p {
+      margin: 0.25rem 0;
+      font-size: 0.95rem;
+    }
+    .bar {
+      margin-top: 0.5rem;
+      height: 10px;
+      background: var(--bar-bg);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    .open {
+      color: var(--bar-fill);
+      font-weight: bold;
+    }
+    .closed {
+      color: var(--live-bg);
+      font-weight: bold;
+    }
+    .live-badge {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: var(--live-bg);
+      color: white;
+      padding: 0.3rem 0.6rem;
+      font-size: 0.75rem;
+      font-weight: bold;
+      border-radius: 6px;
+    }
   </style>
 </head>
 <body>
   <h1 id="title">Forex Market Sessions</h1>
-  <label for="timezone">Timezone:</label>
-  <select id="timezone"></select>
-  <p id="currentTime"></p>
+  <div id="currentTime">Loading time...</div>
+  <select id="timezoneSelect" title="Select timezone"></select>
+
   <button id="toggleOpenOnly">🔍 Show Open Sessions Only</button>
   <button id="langToggle">🌐 اللغة: عربي</button>
   <button id="themeToggle">🌙 Dark Mode</button>
   <div id="sessions"></div>
   <p id="nextSession"></p>
+
+  <!-- Buy Me a Coffee Button -->
+  <a href="https://coff.ee/ghoster" target="_blank" rel="noopener noreferrer"
+     style="position: fixed; bottom: 20px; right: 20px; z-index: 1000;">
+    <img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"
+         alt="Buy Me A Coffee" style="height: 50px; width: 180px;" />
+  </a>
 
   <script>
     const sessions = [
@@ -29,85 +132,155 @@
       { name: 'Sydney', open: '23:00', close: '07:00' },
       { name: 'Tokyo', open: '00:00', close: '08:00' }
     ];
-
     let showOpenOnly = false;
     let lang = 'en';
-    const statusMap = new Map();
-    const notifyPrefs = JSON.parse(localStorage.getItem('notifyPrefs') || '{}');
-    const theme = localStorage.getItem('theme') || 'dark';
-    let currentZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-
-    if (theme === 'light') document.body.classList.add('light-mode');
-
-    const timezoneSelect = document.getElementById('timezone');
-
-    Intl.supportedValuesOf('timeZone').forEach(zone => {
-      const opt = document.createElement('option');
-      opt.value = zone;
-      opt.textContent = zone;
-      if (zone === currentZone) opt.selected = true;
-      timezoneSelect.appendChild(opt);
-    });
-
-    timezoneSelect.addEventListener('change', () => {
-      currentZone = timezoneSelect.value;
-      update();
-    });
-
+    let timezone = localStorage.getItem('timezone') || Intl.DateTimeFormat().resolvedOptions().timeZone;
+    let worldTime = new Date();
     const texts = {
       en: {
-        title: 'Forex Market Sessions',
-        current: '⏱️ Current time',
+        current: '⏱ Current Time',
         showOpen: '🔍 Show Open Sessions Only',
         showAll: '📋 Show All Sessions',
         open: '🟢 Open',
         closed: '🔴 Closed',
         next: '🕒 Next session',
         langBtn: '🌐 اللغة: عربي',
-        alertOn: '🔔',
-        alertOff: '🔕',
         dark: '🌙 Dark Mode',
         light: '☀️ Light Mode'
       },
       ar: {
-        title: 'جلسات سوق الفوركس',
-        current: '⏱️ الوقت الحالي',
+        current: '⏱ الوقت الحالي',
         showOpen: '🔍 عرض الجلسات المفتوحة فقط',
         showAll: '📋 عرض كل الجلسات',
         open: '🟢 مفتوحة',
         closed: '🔴 مغلقة',
         next: '🕒 الجلسة القادمة',
-        langBtn: '🌐 Language: English',
-        alertOn: '🔔',
-        alertOff: '🔕',
+        langBtn: '🌐 English',
         dark: '🌙 الوضع الداكن',
         light: '☀️ الوضع الفاتح'
       }
     };
 
-    function formatAMPM(date, zone) {
-      return new Intl.DateTimeFormat(lang === 'ar' ? 'ar-EG' : 'en-US', {
-        hour: 'numeric', minute: '2-digit', hour12: true, timeZone: zone
-      }).format(date);
+    // Populate timezone dropdown
+    const tzSelect = document.getElementById('timezoneSelect');
+    Intl.supportedValuesOf('timeZone').forEach(tz => {
+      const opt = new Option(tz, tz);
+      if (tz === timezone) opt.selected = true;
+      tzSelect.add(opt);
+    });
+    tzSelect.onchange = () => {
+      timezone = tzSelect.value;
+      localStorage.setItem('timezone', timezone);
+    };
+
+    // Fetch time from WorldTimeAPI
+    async function fetchWorldTime() {
+      try {
+        const res = await fetch(`https://worldtimeapi.org/api/timezone/${timezone}`);
+        if (!res.ok) throw new Error('Failed');
+        const data = await res.json();
+        worldTime = new Date(data.datetime);
+        worldTime.ts0 = Date.now();
+      } catch {
+        // fallback to device clock
+        worldTime = new Date();
+        worldTime.ts0 = Date.now();
+      }
     }
 
-    function parseTime(str, baseDate, zone) {
+    function getNow() {
+      const elapsed = Date.now() - (worldTime.ts0 || Date.now());
+      return new Date(worldTime.getTime() + elapsed);
+    }
+
+    // Format time display
+    function formatTime(dt) {
+      return dt.toLocaleTimeString([], {
+        hour: '2-digit', minute: '2-digit', second: '2-digit',
+        hour12: true, timeZone: timezone
+      });
+    }
+
+    function parseHHMM(str, base) {
       const [h, m] = str.split(':').map(Number);
-      const date = new Date(baseDate);
-      date.setUTCHours(h - new Date().getTimezoneOffset() / 60, m);
-      return new Date(date.toLocaleString('en-US', { timeZone: zone }));
+      const d = new Date(base);
+      d.setHours(h, m, 0, 0);
+      return d;
     }
 
     function update() {
-      const now = new Date();
-      document.getElementById('currentTime').textContent = `${texts[lang].current} (${currentZone}): ${formatAMPM(now, currentZone)}`;
+      const now = getNow();
+      document.getElementById('currentTime').textContent = `${texts[lang].current} (${timezone}): ${formatTime(now)}`;
 
-      // Keep rest of your update logic...
+      const container = document.getElementById('sessions');
+      container.innerHTML = '';
+
+      let next = null;
+
+      sessions.forEach(s => {
+        const open = parseHHMM(s.open, now);
+        let close = parseHHMM(s.close, now);
+        if (close <= open) close.setDate(close.getDate() + 1);
+
+        const isOpen = now >= open && now <= close;
+        const total = close - open;
+        const elapsed = isOpen ? now - open : 0;
+        const pct = isOpen ? Math.min(100, elapsed / total * 100) : 0;
+
+        if (showOpenOnly && !isOpen) return;
+
+        const div = document.createElement('div');
+        div.className = 'session';
+        div.innerHTML = `
+          ${isOpen ? '<div class="live-badge">LIVE</div>' : ''}
+          <h3>${s.name}</h3>
+          <p>${formatTime(open)} → ${formatTime(close)}</p>
+          <p class="${isOpen ? 'open' : 'closed'}">${isOpen ? texts[lang].open : texts[lang].closed}</p>
+          <div class="bar"><div class="bar-fill" style="width:${pct}%;background:${isOpen? 'var(--bar-fill)' : 'var(--live-bg)'};"></div></div>
+        `;
+        container.appendChild(div);
+
+        if (!isOpen && open > now && (!next || open < next.time)) {
+          next = { name: s.name, time: open };
+        }
+      });
+
+      const nextEl = document.getElementById('nextSession');
+      if (next) {
+        const diff = next.time - now;
+        const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
+        const m = String(Math.floor(diff % 3600000 / 60000)).padStart(2, '0');
+        const s = String(Math.floor(diff % 60000 / 1000)).padStart(2, '0');
+        nextEl.textContent = `${texts[lang].next}: ${next.name} ${lang === 'ar' ? 'تفتح خلال' : 'opens in'} ${h}:${m}:${s}`;
+      } else nextEl.textContent = '';
     }
 
-    // Call your initialization scripts
-    update();
-    setInterval(update, 1000);
+    // Initialize
+    async function init() {
+      await fetchWorldTime();
+      update();
+      setInterval(update, 1000);
+      setInterval(fetchWorldTime, 300000); // resync every 5 min
+    }
+    init();
+
+    // Event listeners
+    document.getElementById('toggleOpenOnly').onclick = () => {
+      showOpenOnly = !showOpenOnly;
+      document.getElementById('toggleOpenOnly').textContent = showOpenOnly ? texts[lang].showAll : texts[lang].showOpen;
+    };
+    document.getElementById('langToggle').onclick = () => {
+      lang = lang === 'en' ? 'ar' : 'en';
+      document.getElementById('langToggle').textContent = texts[lang].langBtn;
+      init();
+    };
+    const theme = localStorage.getItem('theme') || 'dark';
+    if (theme === 'light') document.body.classList.add('light-mode');
+    document.getElementById('themeToggle').onclick = () => {
+      document.body.classList.toggle('light-mode');
+      localStorage.setItem('theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
+      document.getElementById('themeToggle').textContent = document.body.classList.contains('light-mode') ? texts[lang].dark : texts[lang].light;
+    };
   </script>
 </body>
 </html>
