@@ -5,48 +5,26 @@
   <title>Forex Market Time (Algeria)</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    :root {
-      --bg: #0f172a;
-      --text: white;
-      --card: #1e293b;
-      --accent: #22c55e;
-      --bar-bg: #334155;
-      --bar-fill: #4ade80;
-      --live-bg: #ef4444;
-      --button-bg: #1e40af;
-    }
-
-    .light-mode {
-      --bg: #f1f5f9;
-      --text: #111827;
-      --card: #e2e8f0;
-      --accent: #16a34a;
-      --bar-bg: #cbd5e1;
-      --bar-fill: #4ade80;
-      --live-bg: #ef4444;
-      --button-bg: #3b82f6;
-    }
-
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background-color: var(--bg);
-      color: var(--text);
+      background-color: #0f172a;
+      color: white;
       padding: 1rem;
       max-width: 720px;
       margin-left: auto;
       margin-right: auto;
     }
     h1 {
-      color: var(--accent);
+      color: #22c55e;
       text-align: center;
       font-size: 1.5rem;
       margin-bottom: 1rem;
     }
-    #currentTime, #nextSession {
+    #currentTime, #userTime {
       text-align: center;
       font-size: 1rem;
-      margin-bottom: 1.5rem;
+      margin-bottom: 0.5rem;
     }
     button {
       display: block;
@@ -54,7 +32,7 @@
       max-width: 320px;
       margin: 0.5rem auto;
       padding: 0.6rem 1rem;
-      background-color: var(--button-bg);
+      background-color: #1e40af;
       border: none;
       color: white;
       border-radius: 8px;
@@ -62,7 +40,7 @@
       font-size: 1rem;
     }
     .session {
-      background: var(--card);
+      background: #1e293b;
       border-radius: 12px;
       padding: 1rem;
       margin-bottom: 1.2rem;
@@ -80,7 +58,7 @@
     .bar {
       margin-top: 0.5rem;
       height: 10px;
-      background: var(--bar-bg);
+      background: #334155;
       border-radius: 6px;
       overflow: hidden;
     }
@@ -89,42 +67,32 @@
       transition: width 0.3s ease;
     }
     .open {
-      color: #22c55e;
+      color: #4ade80;
       font-weight: bold;
     }
     .closed {
-      color: #ef4444;
+      color: #f87171;
       font-weight: bold;
     }
     .live-badge {
       position: absolute;
       top: 1rem;
-      right: 3rem;
-      background: var(--live-bg);
+      right: 1rem;
+      background: #ef4444;
       color: white;
       padding: 0.3rem 0.6rem;
       font-size: 0.75rem;
       font-weight: bold;
       border-radius: 6px;
     }
-    .notify-toggle {
-      position: absolute;
-      top: 1rem;
-      right: 1rem;
-      background: transparent;
-      border: none;
-      color: inherit;
-      cursor: pointer;
-      font-size: 1.1rem;
-    }
   </style>
 </head>
 <body>
   <h1 id="title">Forex Market Sessions (Algeria Time)</h1>
-  <p id="currentTime"></p>
+  <p id="currentTime">⏱️ Current Time (Algiers):</p>
+  <p id="userTime">🕰️ Your Local Time:</p>
   <button id="toggleOpenOnly">🔍 Show Open Sessions Only</button>
   <button id="langToggle">🌐 اللغة: عربي</button>
-  <button id="themeToggle">🌙 Dark Mode</button>
   <div id="sessions"></div>
   <p id="nextSession"></p>
 
@@ -139,54 +107,31 @@
 
     let showOpenOnly = false;
     let lang = 'en';
-    const statusMap = new Map();
-    const notifyPrefs = JSON.parse(localStorage.getItem('notifyPrefs') || '{}');
-    const theme = localStorage.getItem('theme') || 'dark';
-
-    if (theme === 'light') document.body.classList.add('light-mode');
 
     const texts = {
       en: {
         title: 'Forex Market Sessions (Algeria Time)',
-        current: '⏱️ Current time (Algiers)',
+        current: '⏱️ Current Time (Algiers)',
+        local: '🕰️ Your Local Time',
         showOpen: '🔍 Show Open Sessions Only',
         showAll: '📋 Show All Sessions',
         open: '🟢 Open',
         closed: '🔴 Closed',
         next: '🕒 Next session',
-        langBtn: '🌐 اللغة: عربي',
-        alertOn: '🔔',
-        alertOff: '🔕',
-        dark: '🌙 Dark Mode',
-        light: '☀️ Light Mode'
+        langBtn: '🌐 اللغة: عربي'
       },
       ar: {
         title: 'جلسات سوق الفوركس (بتوقيت الجزائر)',
         current: '⏱️ الوقت الحالي (الجزائر)',
+        local: '🕰️ توقيتك المحلي',
         showOpen: '🔍 عرض الجلسات المفتوحة فقط',
         showAll: '📋 عرض كل الجلسات',
         open: '🟢 مفتوحة',
         closed: '🔴 مغلقة',
         next: '🕒 الجلسة القادمة',
-        langBtn: '🌐 Language: English',
-        alertOn: '🔔',
-        alertOff: '🔕',
-        dark: '🌙 الوضع الداكن',
-        light: '☀️ الوضع الفاتح'
+        langBtn: '🌐 Language: English'
       }
     };
-
-    function notify(title, body) {
-      if (Notification.permission === 'granted') {
-        new Notification(title, { body });
-      }
-    }
-
-    function requestNotificationPermission() {
-      if ('Notification' in window && Notification.permission !== 'granted') {
-        Notification.requestPermission();
-      }
-    }
 
     function parseTime(str) {
       const [h, m] = str.split(':').map(Number);
@@ -204,27 +149,33 @@
       return `${hours}:${mins} ${ampm}`;
     }
 
-    function toggleNotify(sessionName) {
-      notifyPrefs[sessionName] = !notifyPrefs[sessionName];
-      localStorage.setItem('notifyPrefs', JSON.stringify(notifyPrefs));
-      update();
-    }
-
     function updateText() {
       document.getElementById('title').textContent = texts[lang].title;
       document.getElementById('toggleOpenOnly').textContent = showOpenOnly
         ? texts[lang].showAll
         : texts[lang].showOpen;
       document.getElementById('langToggle').textContent = texts[lang].langBtn;
-      document.getElementById('themeToggle').textContent =
-        document.body.classList.contains('light-mode') ? texts[lang].dark : texts[lang].light;
     }
 
-    function update() {
+    function updateClock() {
       const now = new Date();
-      const currentTime = formatAMPM(now);
-      document.getElementById('currentTime').textContent = `${texts[lang].current}: ${currentTime}`;
 
+      const options = {
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: true,
+        timeZone: 'Africa/Algiers'
+      };
+
+      const algiersTime = new Intl.DateTimeFormat('en-US', options).format(now);
+      const localTime = formatAMPM(now);
+
+      document.getElementById('currentTime').textContent = `${texts[lang].current}: ${algiersTime}`;
+      document.getElementById('userTime').textContent = `${texts[lang].local}: ${localTime}`;
+    }
+
+    function updateSessions() {
+      const now = new Date();
       const container = document.getElementById('sessions');
       container.innerHTML = '';
       let next = null;
@@ -239,33 +190,17 @@
         const isOpen = elapsed >= 0 && now <= close;
         const pct = Math.max(0, Math.min(100, (elapsed / total) * 100));
 
-        const notifyThis = notifyPrefs[s.name];
-
-        if (statusMap.has(s.name)) {
-          const prev = statusMap.get(s.name);
-          if (prev !== isOpen) {
-            if (notifyThis) {
-              const stateText = isOpen ? texts[lang].open : texts[lang].closed;
-              notify(`${s.name} ${stateText}`, `${s.name} session is now ${isOpen ? 'OPEN' : 'CLOSED'}`);
-            }
-            statusMap.set(s.name, isOpen);
-          }
-        } else {
-          statusMap.set(s.name, isOpen);
-        }
-
         if (showOpenOnly && !isOpen) return;
 
         const sessionDiv = document.createElement('div');
         sessionDiv.className = 'session';
         sessionDiv.innerHTML = `
           ${isOpen ? '<div class="live-badge">LIVE</div>' : ''}
-          <button class="notify-toggle" onclick="toggleNotify('${s.name}')">${notifyThis ? texts[lang].alertOn : texts[lang].alertOff}</button>
           <h3>${s.name}</h3>
           <p>${formatAMPM(open)} → ${formatAMPM(close)}</p>
           <p class="${isOpen ? 'open' : 'closed'}">${isOpen ? texts[lang].open : texts[lang].closed}</p>
           <div class="bar">
-            <div class="bar-fill" style="width: ${pct}%; background: ${isOpen ? 'var(--bar-fill)' : '#f87171'};"></div>
+            <div class="bar-fill" style="width: ${pct}%; background: ${isOpen ? '#4ade80' : '#f87171'};"></div>
           </div>
         `;
         container.appendChild(sessionDiv);
@@ -290,28 +225,23 @@
     document.getElementById('toggleOpenOnly').addEventListener('click', () => {
       showOpenOnly = !showOpenOnly;
       updateText();
-      update();
+      updateSessions();
     });
 
     document.getElementById('langToggle').addEventListener('click', () => {
       lang = lang === 'en' ? 'ar' : 'en';
       updateText();
-      update();
+      updateClock();
+      updateSessions();
     });
 
-    document.getElementById('themeToggle').addEventListener('click', () => {
-      document.body.classList.toggle('light-mode');
-      localStorage.setItem('theme', document.body.classList.contains('light-mode') ? 'light' : 'dark');
-      updateText();
-      update();
-    });
-
-    window.toggleNotify = toggleNotify;
-
-    requestNotificationPermission();
     updateText();
-    update();
-    setInterval(update, 1000);
+    updateClock();
+    updateSessions();
+    setInterval(() => {
+      updateClock();
+      updateSessions();
+    }, 1000);
   </script>
 </body>
 </html>
