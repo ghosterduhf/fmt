@@ -5,9 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Forex Market Time - Algeria</title>
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
@@ -51,15 +49,9 @@
       font-weight: bold;
       font-size: 1rem;
     }
-    .open {
-      color: #16a34a;
-    }
-    .closed {
-      color: #dc2626;
-    }
-    .time {
-      font-family: monospace;
-    }
+    .open { color: #16a34a; }
+    .closed { color: #dc2626; }
+    .time { font-family: monospace; }
   </style>
 </head>
 <body>
@@ -80,11 +72,6 @@
       return new Date(now.toLocaleString("en-US", { timeZone: "Africa/Algiers" }));
     }
 
-    function timeToMinutes(str) {
-      const [h, m] = str.split(':').map(Number);
-      return h * 60 + m;
-    }
-
     function formatTo12h(str) {
       const [h, m] = str.split(':').map(Number);
       const suffix = h >= 12 ? 'PM' : 'AM';
@@ -92,24 +79,30 @@
       return `${hour12}:${m.toString().padStart(2, '0')} ${suffix}`;
     }
 
-    function isOpen(open, close, nowMin) {
-      const o = timeToMinutes(open);
-      const c = timeToMinutes(close);
-      if (c > o) {
-        return nowMin >= o && nowMin < c;
-      } else {
-        return nowMin >= o || nowMin < c;
+    function isOpen(open, close, now) {
+      const [oH, oM] = open.split(':').map(Number);
+      const [cH, cM] = close.split(':').map(Number);
+
+      const openTime = new Date(now);
+      openTime.setHours(oH, oM, 0, 0);
+
+      const closeTime = new Date(now);
+      closeTime.setHours(cH, cM, 0, 0);
+
+      if (closeTime <= openTime) {
+        closeTime.setDate(closeTime.getDate() + 1); // Overnight session
       }
+
+      return now >= openTime && now < closeTime;
     }
 
     function render() {
       const now = getAlgeriaTimeNow();
-      const minutes = now.getHours() * 60 + now.getMinutes();
       const container = document.getElementById('markets');
       container.innerHTML = '';
 
       marketData.forEach(({ city, country, open, close }) => {
-        const status = isOpen(open, close, minutes) ? 'Open' : 'Closed';
+        const status = isOpen(open, close, now) ? 'Open' : 'Closed';
         const statusClass = status.toLowerCase();
 
         const card = document.createElement('div');
@@ -125,7 +118,7 @@
     }
 
     render();
-    setInterval(render, 60000);
+    setInterval(render, 60000); // refresh every minute
   </script>
 </body>
 </html>
