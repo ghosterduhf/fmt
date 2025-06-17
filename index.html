@@ -64,7 +64,7 @@
     }
     .bar-fill {
       height: 100%;
-      transition: width 1s linear;
+      transition: width 0.3s ease;
     }
     .open {
       color: #4ade80;
@@ -95,8 +95,6 @@
   <div id="sessions"></div>
   <p id="nextSession"></p>
 
-  <audio id="alert-sound" src="https://cdn.pixabay.com/audio/2022/03/15/audio_d5d4fa2e68.mp3"></audio>
-
   <script>
     const sessions = [
       { name: 'Frankfurt', open: '07:00', close: '15:00' },
@@ -108,7 +106,7 @@
 
     let showOpenOnly = false;
     let lang = 'en';
-    let previousStates = {};
+    const statusMap = new Map();
 
     const texts = {
       en: {
@@ -132,6 +130,18 @@
         langBtn: '🌐 Language: English'
       }
     };
+
+    function notify(title, body) {
+      if (Notification.permission === 'granted') {
+        new Notification(title, { body });
+      }
+    }
+
+    function requestNotificationPermission() {
+      if ('Notification' in window && Notification.permission !== 'granted') {
+        Notification.requestPermission();
+      }
+    }
 
     function parseTime(str) {
       const [h, m] = str.split(':').map(Number);
@@ -176,10 +186,16 @@
         const isOpen = elapsed >= 0 && now <= close;
         const pct = Math.max(0, Math.min(100, (elapsed / total) * 100));
 
-        if (previousStates[s.name] !== undefined && previousStates[s.name] !== isOpen) {
-          document.getElementById('alert-sound').play().catch(() => {});
+        if (statusMap.has(s.name)) {
+          const prev = statusMap.get(s.name);
+          if (prev !== isOpen) {
+            const eventText = isOpen ? texts[lang].open : texts[lang].closed;
+            notify(`${s.name} ${eventText}`, `${s.name} session is now ${isOpen ? 'OPEN' : 'CLOSED'}`);
+            statusMap.set(s.name, isOpen);
+          }
+        } else {
+          statusMap.set(s.name, isOpen);
         }
-        previousStates[s.name] = isOpen;
 
         if (showOpenOnly && !isOpen) return;
 
@@ -206,7 +222,7 @@
         const diff = next.time - now;
         const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
         const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
-        const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+        const s = String(Math.floor((diff % 1000) / 100)).padStart(2, '0');
         nextText.textContent = `${texts[lang].next}: ${next.name} ${lang === 'ar' ? 'تفتح خلال' : 'opens in'} ${h}:${m}:${s}`;
       } else {
         nextText.textContent = '';
@@ -225,6 +241,7 @@
       update();
     });
 
+    requestNotificationPermission();
     updateText();
     update();
     setInterval(update, 1000);
