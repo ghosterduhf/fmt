@@ -2,123 +2,147 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Forex Market Time - Algeria</title>
+  <title>Forex Market Time (Algeria)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    * { box-sizing: border-box; }
     body {
       margin: 0;
       font-family: 'Segoe UI', sans-serif;
-      background-color: #f1f5f9;
-      color: #111;
-      padding: 1rem;
+      background-color: #0f172a;
+      color: white;
+      padding: 2rem;
     }
     h1 {
+      color: #22c55e;
       text-align: center;
+    }
+    #currentTime, #nextSession {
+      text-align: center;
+      margin-top: 0.5rem;
       margin-bottom: 2rem;
+      font-size: 1.1rem;
     }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-      gap: 1.5rem;
-      max-width: 1200px;
-      margin: auto;
-    }
-    .card {
-      background: white;
+    .session {
+      background: #1e293b;
       border-radius: 12px;
-      padding: 1.5rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
-      transition: transform 0.2s ease;
+      padding: 1rem 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     }
-    .card:hover {
-      transform: translateY(-4px);
-    }
-    .card h2 {
+    .session h3 {
       margin: 0 0 0.5rem;
-      font-size: 1.3rem;
+      font-size: 1.4rem;
     }
-    .card small {
-      color: #666;
-      font-size: 0.85rem;
+    .session p {
+      margin: 0.3rem 0;
     }
-    .info {
-      margin: 0.4rem 0;
+    .bar {
+      margin-top: 0.5rem;
+      height: 10px;
+      background: #334155;
+      border-radius: 6px;
+      overflow: hidden;
     }
-    .status {
+    .bar-fill {
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    .open {
+      color: #4ade80;
       font-weight: bold;
-      font-size: 1rem;
     }
-    .open { color: #16a34a; }
-    .closed { color: #dc2626; }
-    .time { font-family: monospace; }
+    .closed {
+      color: #f87171;
+      font-weight: bold;
+    }
+    @media (max-width: 600px) {
+      body {
+        padding: 1rem;
+      }
+    }
   </style>
 </head>
 <body>
-  <h1>Forex Market Status (Africa/Algiers)</h1>
-  <div class="grid" id="markets"></div>
+  <h1>Forex Market Sessions (Algeria Time)</h1>
+  <p id="currentTime"></p>
+  <div id="sessions"></div>
+  <p id="nextSession"></p>
 
   <script>
-    const marketData = [
-      { city: 'Frankfurt', country: 'Germany', open: '07:00', close: '15:00' },
-      { city: 'London', country: 'Great Britain', open: '08:00', close: '16:00' },
-      { city: 'New York', country: 'United States', open: '13:00', close: '21:00' },
-      { city: 'Sydney', country: 'Australia', open: '23:00', close: '07:00' },
-      { city: 'Tokyo', country: 'Japan', open: '00:00', close: '08:00' }
+    const sessions = [
+      { name: 'Frankfurt', open: '07:00', close: '15:00' },
+      { name: 'London',    open: '08:00', close: '16:00' },
+      { name: 'New York',  open: '13:00', close: '21:00' },
+      { name: 'Sydney',    open: '23:00', close: '07:00' },
+      { name: 'Tokyo',     open: '00:00', close: '08:00' }
     ];
 
-    function getAlgeriaTimeNow() {
-      const now = new Date();
-      return new Date(now.toLocaleString("en-US", { timeZone: "Africa/Algiers" }));
-    }
-
-    function formatTo12h(str) {
+    function parseTime(str) {
       const [h, m] = str.split(':').map(Number);
-      const suffix = h >= 12 ? 'PM' : 'AM';
-      const hour12 = ((h + 11) % 12 + 1);
-      return `${hour12}:${m.toString().padStart(2, '0')} ${suffix}`;
+      const d = new Date();
+      d.setHours(h, m, 0, 0);
+      return d;
     }
 
-    function isOpen(open, close, now) {
-      const [oH, oM] = open.split(':').map(Number);
-      const [cH, cM] = close.split(':').map(Number);
-
-      const openTime = new Date(now);
-      openTime.setHours(oH, oM, 0, 0);
-
-      const closeTime = new Date(now);
-      closeTime.setHours(cH, cM, 0, 0);
-
-      if (closeTime <= openTime) {
-        closeTime.setDate(closeTime.getDate() + 1); // Overnight session
-      }
-
-      return now >= openTime && now < closeTime;
+    function formatAMPM(date) {
+      let hours = date.getHours();
+      const minutes = date.getMinutes();
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12 || 12;
+      const mins = minutes < 10 ? '0' + minutes : minutes;
+      return `${hours}:${mins} ${ampm}`;
     }
 
-    function render() {
-      const now = getAlgeriaTimeNow();
-      const container = document.getElementById('markets');
+    function update() {
+      const now = new Date();
+      const currentTime = formatAMPM(now);
+      document.getElementById('currentTime').textContent = `⏱️ Current time (Algiers): ${currentTime}`;
+
+      const container = document.getElementById('sessions');
       container.innerHTML = '';
+      let next = null;
 
-      marketData.forEach(({ city, country, open, close }) => {
-        const status = isOpen(open, close, now) ? 'Open' : 'Closed';
-        const statusClass = status.toLowerCase();
+      sessions.forEach(s => {
+        const open = parseTime(s.open);
+        let close = parseTime(s.close);
+        if (close <= open) close.setDate(close.getDate() + 1);
 
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <h2>${city} <small>(${country})</small></h2>
-          <p class="info">Open: <span class="time">${formatTo12h(open)}</span></p>
-          <p class="info">Close: <span class="time">${formatTo12h(close)}</span></p>
-          <p class="info status ${statusClass}">Status: ${status}</p>
+        const total = close - open;
+        const elapsed = now - open;
+        const isOpen = elapsed >= 0 && now <= close;
+        const pct = Math.max(0, Math.min(100, (elapsed / total) * 100));
+
+        const sessionDiv = document.createElement('div');
+        sessionDiv.className = 'session';
+        sessionDiv.innerHTML = `
+          <h3>${s.name}</h3>
+          <p>${formatAMPM(open)} → ${formatAMPM(close)}</p>
+          <p class="${isOpen ? 'open' : 'closed'}">${isOpen ? '🟢 Open' : '🔴 Closed'}</p>
+          <div class="bar">
+            <div class="bar-fill" style="width: ${pct}%; background: ${isOpen ? '#4ade80' : '#f87171'};"></div>
+          </div>
         `;
-        container.appendChild(card);
+        container.appendChild(sessionDiv);
+
+        if (!isOpen && open > now && (!next || open < next.time)) {
+          next = { name: s.name, time: open };
+        }
       });
+
+      const nextText = document.getElementById('nextSession');
+      if (next) {
+        const diff = next.time - now;
+        const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
+        const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
+        const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
+        nextText.textContent = `🕒 Next session: ${next.name} opens in ${h}:${m}:${s}`;
+      } else {
+        nextText.textContent = '';
+      }
     }
 
-    render();
-    setInterval(render, 60000); // refresh every minute
+    update();
+    setInterval(update, 1000);
   </script>
 </body>
 </html>
