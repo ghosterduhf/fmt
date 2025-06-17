@@ -26,11 +26,11 @@
       font-size: 1rem;
       margin-bottom: 1.5rem;
     }
-    #toggleOpenOnly {
+    button {
       display: block;
       width: 100%;
       max-width: 320px;
-      margin: 0 auto 1.5rem auto;
+      margin: 0.5rem auto;
       padding: 0.6rem 1rem;
       background-color: #1e40af;
       border: none;
@@ -100,22 +100,47 @@
   </style>
 </head>
 <body>
-  <h1>Forex Market Sessions (Algeria Time)</h1>
+  <h1 id="title">Forex Market Sessions (Algeria Time)</h1>
   <p id="currentTime"></p>
   <button id="toggleOpenOnly">🔍 Show Open Sessions Only</button>
+  <button id="langToggle">🌐 اللغة: عربي</button>
   <div id="sessions"></div>
   <p id="nextSession"></p>
 
   <script>
     const sessions = [
       { name: 'Frankfurt', open: '07:00', close: '15:00' },
-      { name: 'London',    open: '08:00', close: '16:00' },
-      { name: 'New York',  open: '13:00', close: '21:00' },
-      { name: 'Sydney',    open: '23:00', close: '07:00' },
-      { name: 'Tokyo',     open: '00:00', close: '08:00' }
+      { name: 'London', open: '08:00', close: '16:00' },
+      { name: 'New York', open: '13:00', close: '21:00' },
+      { name: 'Sydney', open: '23:00', close: '07:00' },
+      { name: 'Tokyo', open: '00:00', close: '08:00' }
     ];
 
     let showOpenOnly = false;
+    let lang = 'en';
+
+    const texts = {
+      en: {
+        title: 'Forex Market Sessions (Algeria Time)',
+        current: '⏱️ Current time (Algiers)',
+        showOpen: '🔍 Show Open Sessions Only',
+        showAll: '📋 Show All Sessions',
+        open: '🟢 Open',
+        closed: '🔴 Closed',
+        next: '🕒 Next session',
+        langBtn: '🌐 اللغة: عربي'
+      },
+      ar: {
+        title: 'جلسات سوق الفوركس (بتوقيت الجزائر)',
+        current: '⏱️ الوقت الحالي (الجزائر)',
+        showOpen: '🔍 عرض الجلسات المفتوحة فقط',
+        showAll: '📋 عرض كل الجلسات',
+        open: '🟢 مفتوحة',
+        closed: '🔴 مغلقة',
+        next: '🕒 الجلسة القادمة',
+        langBtn: '🌐 Language: English'
+      }
+    };
 
     function parseTime(str) {
       const [h, m] = str.split(':').map(Number);
@@ -133,10 +158,18 @@
       return `${hours}:${mins} ${ampm}`;
     }
 
+    function updateText() {
+      document.getElementById('title').textContent = texts[lang].title;
+      document.getElementById('toggleOpenOnly').textContent = showOpenOnly
+        ? texts[lang].showAll
+        : texts[lang].showOpen;
+      document.getElementById('langToggle').textContent = texts[lang].langBtn;
+    }
+
     function update() {
       const now = new Date();
       const currentTime = formatAMPM(now);
-      document.getElementById('currentTime').textContent = `⏱️ Current time (Algiers): ${currentTime}`;
+      document.getElementById('currentTime').textContent = `${texts[lang].current}: ${currentTime}`;
 
       const container = document.getElementById('sessions');
       container.innerHTML = '';
@@ -160,7 +193,7 @@
           ${isOpen ? '<div class="live-badge">LIVE</div>' : ''}
           <h3>${s.name}</h3>
           <p>${formatAMPM(open)} → ${formatAMPM(close)}</p>
-          <p class="${isOpen ? 'open' : 'closed'}">${isOpen ? '🟢 Open' : '🔴 Closed'}</p>
+          <p class="${isOpen ? 'open' : 'closed'}">${isOpen ? texts[lang].open : texts[lang].closed}</p>
           <div class="bar">
             <div class="bar-fill" style="width: ${pct}%; background: ${isOpen ? '#4ade80' : '#f87171'};"></div>
           </div>
@@ -178,7 +211,7 @@
         const h = String(Math.floor(diff / 3600000)).padStart(2, '0');
         const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, '0');
         const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, '0');
-        nextText.textContent = `🕒 Next session: ${next.name} opens in ${h}:${m}:${s}`;
+        nextText.textContent = `${texts[lang].next}: ${next.name} ${lang === 'ar' ? 'تفتح خلال' : 'opens in'} ${h}:${m}:${s}`;
       } else {
         nextText.textContent = '';
       }
@@ -186,12 +219,17 @@
 
     document.getElementById('toggleOpenOnly').addEventListener('click', () => {
       showOpenOnly = !showOpenOnly;
-      document.getElementById('toggleOpenOnly').textContent = showOpenOnly
-        ? '📋 Show All Sessions'
-        : '🔍 Show Open Sessions Only';
+      updateText();
       update();
     });
 
+    document.getElementById('langToggle').addEventListener('click', () => {
+      lang = lang === 'en' ? 'ar' : 'en';
+      updateText();
+      update();
+    });
+
+    updateText();
     update();
     setInterval(update, 1000);
   </script>
